@@ -20,12 +20,15 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ServerChannel;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.PortUnreachableException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -33,6 +36,7 @@ import java.util.List;
  */
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
+    InternalLogger logger = InternalLoggerFactory.getInstance(AbstractNioChannel.class);
     /**
      * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, SelectableChannel, int)}
      */
@@ -56,6 +60,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             if (!config.isAutoRead() && !isReadPending()) {
                 // ChannelConfig.setAutoRead(false) was called in the meantime
                 removeReadOp();
+                boolean isAutoRead = config.isAutoRead();
+                boolean isReadPending =  isReadPending();
+                new Exception("isAutoRead: " + isAutoRead + ". isReadPending: " + isReadPending).printStackTrace();
                 return;
             }
 

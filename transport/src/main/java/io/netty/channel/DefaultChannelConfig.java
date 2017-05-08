@@ -15,11 +15,15 @@
  */
 package io.netty.channel;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -282,6 +286,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         } else if (!autoRead && oldAutoRead) {
             autoReadCleared();
         }
+        new Exception("set autoRead" + autoRead).printStackTrace();
         return this;
     }
 

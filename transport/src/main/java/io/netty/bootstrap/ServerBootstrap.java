@@ -177,14 +177,19 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel ch) throws Exception {
-                ChannelPipeline pipeline = ch.pipeline();
+            public void initChannel(final Channel ch) throws Exception {
+                final ChannelPipeline pipeline = ch.pipeline();
                 ChannelHandler handler = handler();
                 if (handler != null) {
                     pipeline.addLast(handler);
                 }
-                pipeline.addLast(new ServerBootstrapAcceptor(
-                        currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
+                ch.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.addLast(new ServerBootstrapAcceptor(
+                                currentChildGroup, currentChildHandler, ch, currentChildOptions, currentChildAttrs));
+                    }
+                });
             }
         });
     }
@@ -218,14 +223,21 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private final ChannelHandler childHandler;
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
+        private final Runnable readRecoverTask;
 
         ServerBootstrapAcceptor(
-                EventLoopGroup childGroup, ChannelHandler childHandler,
+                EventLoopGroup childGroup, ChannelHandler childHandler, final Channel channel,
                 Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {
             this.childGroup = childGroup;
             this.childHandler = childHandler;
             this.childOptions = childOptions;
             this.childAttrs = childAttrs;
+            this.readRecoverTask = new OneTimeTask() {
+                @Override
+                public void run() {
+                    channel.config().setAutoRead(true);
+                }
+            };
         }
 
         @Override
@@ -275,12 +287,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 // stop accept new connections for 1 second to allow the channel to recover
                 // See https://github.com/netty/netty/issues/1328
                 config.setAutoRead(false);
-                ctx.channel().eventLoop().schedule(new OneTimeTask() {
-                    @Override
-                    public void run() {
-                       config.setAutoRead(true);
-                    }
-                }, 1, TimeUnit.SECONDS);
+                cause.printStackTrace();
+                ctx.channel().eventLoop().schedule(readRecoverTask, 1, TimeUnit.SECONDS);
             }
             // still let the exceptionCaught event flow through the pipeline to give the user
             // a chance to do something with it
